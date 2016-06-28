@@ -14,7 +14,10 @@ void yyerror(const char * s);
 %code requires {
     /* Goes into the .h I think */
     #include <list>
+    #include <memory>
     #include <string>
+
+    #include "Eigen/Eigen"
 typedef std::pair<std::string, std::list<unsigned int>*> str_type;
 typedef std::list<str_type*> prod_type;
 }
@@ -64,16 +67,20 @@ class initialization_error : public std::invalid_argument
     str_type * strval;
     std::list<str_type*> * strlistval;
     std::list<prod_type*> * prodlistval;
+    Eigen::Vector2d * vecval;
+    std::list<Eigen::Vector2d*> * veclistval;
 }
 
 %token TERMINAL NONTERMINAL AXIOM
 %token ARROW
-%token SEMICOLON LPAR RPAR COMMA VERT
+%token SEMICOLON LPAR RPAR COMMA VERT LBRA RBRA
 
 %token <ival> INT
 %token <sval> STRING
 
 %type <ilistval> INTS
+%type <vecval> VECTOR
+%type <veclistval> VECTORS
 
 %type <strval> structure
 %type <strlistval> production
@@ -95,11 +102,17 @@ statement:
     | proddef
     ;
 termdef:
-    TERMINAL STRING LPAR INT RPAR SEMICOLON {
+    TERMINAL STRING LPAR INT RPAR LBRA VECTORS RBRA SEMICOLON {
         /*std::cout << "New terminal: \"" << *$2 << "\" of arity "*/
                   /*<< $4 << std::endl;*/
         type_ptr type = std::make_shared<grammar::MedusaType>(*$2);
+        for( Eigen::Vector2d * point : *$7 )
+        {
+            type->points.push_back(*point);
+        }
+        delete $7;
         _type_dict[*$2] = type;
+        delete $2;
         _grammar->addMedusaType(type);
     }
     ;
@@ -109,6 +122,7 @@ nontermdef:
                   /*<< $4 << std::endl;*/
         type_ptr type = std::make_shared<grammar::MedusaType>(*$2);
         _type_dict[*$2] = type;
+        delete $2;
         _grammar->addMedusaType(type);
     }
     ;
@@ -124,14 +138,18 @@ axiomdef:
         catch(const std::out_of_range & exception)
         {
             std::ostringstream sstream;
-            sstream << "Undefined element \"" << $2 << "\"";
+            sstream << "Undefined element \"" << *$2 << "\"";
+            delete $2;
             throw initialization_error(sstream.str().c_str());
         }
+        delete $2;
     }
     ;
 proddef:
     structure INT ARROW productions SEMICOLON {
         add_production($1, $2, $4, _grammar);
+        delete $1;
+        delete $4;
     }
     ;
 productions:
@@ -171,6 +189,22 @@ INTS:
     }
     | INT {
         std::list<unsigned int> * lst = new std::list<unsigned int>();
+        lst->push_back($1);
+        $$ = lst;
+    }
+    ;
+VECTOR:
+    LPAR INT COMMA INT RPAR {
+        $$ = new Eigen::Vector2d($2,$4);
+    }
+    ;
+VECTORS:
+    VECTORS COMMA VECTOR {
+        $1->push_back($3);
+        $$ = $1;
+    }
+    | VECTOR {
+        std::list<Eigen::Vector2d *> * lst = new std::list<Eigen::Vector2d *>();
         lst->push_back($1);
         $$ = lst;
     }

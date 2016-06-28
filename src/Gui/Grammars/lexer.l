@@ -40,5 +40,7 @@ axiom {
 "(" { return LPAR; }
 ")" { return RPAR; }
 "," { return COMMA; }
-"|" { return COMMA; }
+"|" { return VERT; }
+"[" { return LBRA; }
+"]" { return RBRA; }
 %%
