@@ -164,6 +164,9 @@ public slots:
     // Help message
     void updateStatusBarHelp();
 
+    // Grammar stuff
+    void generateGrammar();
+
 protected:
     // Global event filter
     bool eventFilter(QObject * watched, QEvent * event);
@@ -211,6 +214,7 @@ private:
     // Sketch
     QAction * actionPlanarMapMode_;
     QAction * actionSnapMode_;
+    QAction * actionGrammarMode_;
     SpinBox * edgeWidth_;
     QAction * actionEdgeWidth_;
     SpinBox * snapThreshold_;

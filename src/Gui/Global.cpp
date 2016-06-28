@@ -17,6 +17,8 @@
 #include "ColorSelector.h"
 #include "Timeline.h"
 
+#include "Grammars/grammargenerator.h"
+
 #include <QDebug>
 #include <QApplication>
 #include <QKeyEvent>
@@ -456,6 +458,15 @@ void Global::createToolBars()
     // Edge width
     actionSnapThreshold_ = toolModeToolBar_->addWidget(snapThreshold_);
 
+    // Grammar editing
+    actionGrammarMode_ = new QAction(this);
+    toolModeToolBar_->addAction(actionGrammarMode_);
+    toolModeToolBar_->widgetForAction(actionGrammarMode_)->setFixedSize(110,sideLength);
+    actionGrammarMode_->setText(tr("Generate from grammar"));
+    actionGrammarMode_->setShortcutContext(Qt::ApplicationShortcut);
+    mainWindow()->addAction(actionGrammarMode_);
+    connect(actionGrammarMode_, SIGNAL(triggered(bool)), this, SLOT(generateGrammar()));
+
     // ---------------------   Sculpt options   ------------------------
 
     actionSculptRadius_ = toolModeToolBar_->addWidget(sculptRadius_);
@@ -794,6 +805,14 @@ void Global::updateStatusBarHelp()
     }
 
     statusBarHelp_->setText(message);
+}
+
+// Grammar stuff
+void Global::generateGrammar()
+{
+    // To Do
+    grammar::GrammarGenerator generator = grammar::GrammarGenerator();
+    generator.generate();
 }
 
 // Other getters

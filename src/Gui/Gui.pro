@@ -188,7 +188,15 @@ HEADERS += MainWindow.h \
     Version.h \
     UpdateCheck.h \
     VectorAnimationComplex/BoundingBox.h \
-    VectorAnimationComplex/TransformTool.h
+    VectorAnimationComplex/TransformTool.h \
+    Grammars/grammargenerator.h \
+    Grammars/hypergraph.h \
+    Grammars/hyperedge.h \
+    Grammars/grammar.h \
+    Grammars/production.h \
+    Grammars/medusa.h \
+    Grammars/medusatype.h \
+    Grammars/productionmanager.h
 
 SOURCES += main.cpp \
     SaveAndLoad.cpp \
@@ -278,4 +286,40 @@ SOURCES += main.cpp \
     Version.cpp \
     UpdateCheck.cpp \
     VectorAnimationComplex/BoundingBox.cpp \
-    VectorAnimationComplex/TransformTool.cpp
+    VectorAnimationComplex/TransformTool.cpp \
+    Grammars/grammargenerator.cpp \
+    Grammars/hypergraph.cpp \
+    Grammars/hyperedge.cpp \
+    Grammars/grammar.cpp \
+    Grammars/production.cpp \
+    Grammars/medusa.cpp \
+    Grammars/medusatype.cpp \
+    Grammars/productionmanager.cpp
+
+DISTFILES += \
+    images/go-next-view.png \
+    images/go-previous-view.png \
+    images/icon-16.png \
+    images/icon-32.png \
+    images/icon-48.png \
+    images/logo.png \
+    images/logobeta.png \
+    images/icons.svg \
+    images/logo.svg \
+    images/VPaint.ico \
+    VPaint.ico \
+    images/svg.icns \
+    images/vec.icns \
+    images/icon.xcf \
+    images/letter.xcf \
+    images/string.xcf \
+    images/svg.xcf \
+    images/vec.xcf \
+    Gui.rc
+
+HEADERS += parser.h
+
+SOURCES += parser.cpp \
+        lexer.cpp
+
+LIBS += -lfl
