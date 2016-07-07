@@ -8,6 +8,7 @@
 
 #include "hypergraph.h"
 #include "medusatype.h"
+#include "attributeexpr.h"
 
 namespace grammar
 {
@@ -15,13 +16,26 @@ namespace grammar
 
     // data structure representing a new structure to be created
     typedef std::shared_ptr<MedusaType> type_ptr;
-    typedef std::pair<type_ptr, std::vector<unsigned int>> restruct;
-    typedef std::shared_ptr<restruct> restruct_ptr;
 
     typedef std::shared_ptr<Medusa> edge_ptr;
 
     class Production
     {
+        public:
+            struct result_structure : public std::vector<unsigned int>
+            {
+                    type_ptr type;
+                    AttributeExpr * x_expr = new InheritedXAttributeExpr();
+                    AttributeExpr * y_expr = new InheritedYAttributeExpr();
+                    AttributeExpr * rotation =
+                            new InheritedRotationAttributeExpr();
+                    result_structure(type_ptr type,
+                                     std::vector<unsigned int> * aps);
+                    result_structure(type_ptr type,
+                                     std::list<unsigned int> * aps);
+            };
+            typedef std::shared_ptr<result_structure> restruct_ptr;
+
         private:
             // type of the non-terminal being replaced
             type_ptr head_;

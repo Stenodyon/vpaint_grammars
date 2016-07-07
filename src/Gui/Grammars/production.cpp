@@ -4,6 +4,20 @@
 
 namespace grammar
 {
+    Production::result_structure::result_structure(type_ptr type,
+                                                   std::vector<unsigned int> * aps)
+        : std::vector<unsigned int>(*aps), type(type)
+    {}
+    Production::result_structure::result_structure(type_ptr type,
+                                                   std::list<unsigned int> * aps)
+        : type(type)
+    {
+        for(unsigned int node : *aps)
+        {
+            this->push_back(node);
+        }
+    }
+
     // PRODUCTION
     Production::Production(type_ptr head, unsigned int newNodes)
         : head_(head), newNodes_(newNodes)
@@ -30,9 +44,11 @@ namespace grammar
             nodeMap.push_back(graph->newNode());
         for(restruct_ptr rs : this->body_)
         {
-            type_ptr type = rs->first;
-            edge_ptr newEdge = std::make_shared<Medusa>(type);
-            for(unsigned int noderef : rs->second)
+            edge_ptr newEdge = std::make_shared<Medusa>(rs->type);
+            newEdge->x_ = rs->x_expr->evaluate(edge);
+            newEdge->y_ = rs->y_expr->evaluate(edge);
+            newEdge->rotation_ = rs->rotation->evaluate(edge);
+            for(unsigned int noderef : *rs)
                 newEdge->push_back(nodeMap[noderef]);
             graph->addEdge(newEdge);
         }

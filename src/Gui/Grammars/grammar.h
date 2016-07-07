@@ -58,13 +58,6 @@ namespace grammar
             void setAxiom(type_ptr medtype);
             type_ptr getAxiom();
     };
-
-    // Keith Haring Grammar
-    class KHG : public Grammar
-    {
-        public:
-            KHG();
-    };
 }
 
 #endif // GRAMMAR_H

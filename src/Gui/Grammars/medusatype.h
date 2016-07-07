@@ -4,6 +4,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "Eigen/Eigen"
 

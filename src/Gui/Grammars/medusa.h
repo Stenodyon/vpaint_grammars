@@ -4,6 +4,8 @@
 #include <memory>
 #include <iostream>
 
+#include <QColor>
+
 #include "hyperedge.h"
 #include "medusatype.h"
 
@@ -16,6 +18,11 @@ namespace grammar
         private:
             type_ptr type_;
         public:
+            QColor color_;
+            double x_;
+            double y_;
+            double rotation_; // In radians
+
             Medusa(type_ptr type);
 
             type_ptr getType();

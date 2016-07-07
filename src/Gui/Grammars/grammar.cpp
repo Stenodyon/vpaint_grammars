@@ -1,14 +1,15 @@
 #include "grammar.h"
 
-#include <stdexcept>
+#include <cmath>
 #include <ostream>
+#include <stdexcept>
 
 #include "Global.h"
 #include "VectorAnimationComplex/VAC.h"
 
-#include <QMessageBox>
 #include <QFile>
 #include <QTextStream>
+#include <QMessageBox>
 #include <QRegExp>
 
 //#include "parser.h"
@@ -52,6 +53,16 @@ namespace grammar
         this->medusas_.push_back(medtype);
     }
 
+    Eigen::Vector2d * rotate(Eigen::Vector2d & vec, double angle)
+    {
+        double x = vec[0];
+        double y = vec[1];
+        double newx = x * cos(angle) - y * sin(angle);
+        double newy = x * sin(angle) + y * cos(angle);
+        return new Eigen::Vector2d(newx, newy);
+    }
+
+    // This is a real mess
     void Grammar::draw(HyperGraph<Medusa> * graph)
     {
         vac::VAC * vac = global()->currentVAC();
@@ -60,16 +71,23 @@ namespace grammar
             type_ptr type = edge->getType();
             unsigned int pointCount = type->points.size();
             std::vector<vac::KeyVertex *> vertices;
+            // offset as evaluated from attributes
+            Eigen::Vector2d offset = Eigen::Vector2d(edge->x_, edge->y_);
             for(Eigen::Vector2d point : type->points)
+            {
+                std::unique_ptr<Eigen::Vector2d> newpoint =
+                        std::unique_ptr<Eigen::Vector2d>(
+                            rotate(point, edge->rotation_));
                 vertices.push_back(
-                            vac->newKeyVertex(Time(), point));
+                            vac->newKeyVertex(Time(), *newpoint + offset));
+            }
             for(unsigned int index = 0; index < pointCount; index++)
             {
                 vac::KeyEdge * ke = vac->newKeyEdge(
                             Time(),
                             vertices[index],
                             vertices[(index + 1) % pointCount],
-                            0, 1);
+                            0, 10);
                 //vac::KeyHalfedge * he = new vac::KeyHalfedge(ke, false);
                 std::cout << "KeyEdge(" << index << ","
                           << (index + 1) % pointCount << ")" << std::endl;

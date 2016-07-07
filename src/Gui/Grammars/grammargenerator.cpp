@@ -6,9 +6,10 @@
 
 #include "medusa.h"
 
+#include <QMessageBox>
 #include <QFileDialog>
-#include <QString>
 #include <QObject>
+#include <QString>
 #include <QTextStream>
 
 namespace grammar
@@ -48,8 +49,18 @@ namespace grammar
                     QObject::tr("Grammar files *.*"));
         if( filename != "" )
         {
-            // Loading the grammar
-            this->grammar_ = std::make_shared<Grammar>(filename);
+            try
+            {
+                // Loading the grammar
+                this->grammar_ = std::make_shared<Grammar>(filename);
+            }
+            catch(const std::invalid_argument & exception)
+            {
+                QMessageBox messageBox;
+                messageBox.critical(0,"Error",exception.what());
+                messageBox.setFixedSize(500,200);
+                return;
+            }
             type_ptr type = grammar_->getAxiom();
             edge_ptr edge = std::make_shared<Medusa>(type);
             hg_.addEdge(edge); // Adding the axiom

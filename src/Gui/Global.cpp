@@ -461,7 +461,7 @@ void Global::createToolBars()
     // Grammar editing
     actionGrammarMode_ = new QAction(this);
     toolModeToolBar_->addAction(actionGrammarMode_);
-    toolModeToolBar_->widgetForAction(actionGrammarMode_)->setFixedSize(110,sideLength);
+    //toolModeToolBar_->widgetForAction(actionGrammarMode_)->setFixedSize(110,sideLength);
     actionGrammarMode_->setText(tr("Generate from grammar"));
     actionGrammarMode_->setShortcutContext(Qt::ApplicationShortcut);
     mainWindow()->addAction(actionGrammarMode_);

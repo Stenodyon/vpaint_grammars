@@ -13,13 +13,20 @@ void yyerror(const char * s);
 
 %code requires {
     /* Goes into the .h I think */
-    #include <list>
-    #include <memory>
-    #include <string>
+#include <list>
+#include <memory>
+#include <string>
 
-    #include "Eigen/Eigen"
+#include "Eigen/Eigen"
+
+#include "production.h"
+#include "attributeexpr.h"
+
+typedef grammar::Production::result_structure restruct;
 typedef std::pair<std::string, std::list<unsigned int>*> str_type;
-typedef std::list<str_type*> prod_type;
+typedef std::list<restruct*> prod_type;
+typedef std::pair<std::string, grammar::AttributeExpr*> attribute_t;
+typedef std::list<attribute_t*> attrlist;
 }
 
 %code top {
@@ -27,6 +34,7 @@ typedef std::list<str_type*> prod_type;
 #include <iostream>
 #include <list>
 #include <map>
+#include <sstream>
 #include <string>
 
 #include <QString>
@@ -37,10 +45,12 @@ typedef std::list<str_type*> prod_type;
 
 typedef std::shared_ptr<grammar::MedusaType> type_ptr;
 typedef std::pair<std::string, std::list<unsigned int>*> str_type;
-typedef std::list<str_type*> prod_type;
+typedef grammar::Production::result_structure restruct;
+typedef std::list<restruct*> prod_type;
 typedef std::shared_ptr<grammar::Production> prod_ptr;
-typedef std::pair<type_ptr, std::vector<unsigned int>> restruct;
 typedef std::shared_ptr<restruct> restruct_ptr;
+typedef std::pair<std::string, grammar::AttributeExpr*> attribute_t;
+typedef std::list<attribute_t*> attrlist;
 
 void parse_grammar(QString string, grammar::Grammar * grammar);
 void add_production(str_type * initial, int newnodes,
@@ -62,29 +72,45 @@ class initialization_error : public std::invalid_argument
 %union
 {
     int ival;
+    double fval;
     std::string * sval;
     std::list<unsigned int> * ilistval;
     str_type * strval;
-    std::list<str_type*> * strlistval;
+    std::list<restruct*> * strlistval;
     std::list<prod_type*> * prodlistval;
     Eigen::Vector2d * vecval;
     std::list<Eigen::Vector2d*> * veclistval;
+    grammar::AttributeExpr * exprval;
+    attribute_t * attrval;
+    attrlist * attrlistval;
+    restruct * restructval;
 }
 
-%token TERMINAL NONTERMINAL AXIOM
+%token TERMINAL NONTERMINAL AXIOM COLOR
 %token ARROW
 %token SEMICOLON LPAR RPAR COMMA VERT LBRA RBRA
+%token PLUS TIMES EQUAL
+%token PARENTX PARENTY PARENTROTATION
 
-%token <ival> INT
+%token <sval> NUMBER
 %token <sval> STRING
+%token <sval> ATTRIBUTENAME
 
 %type <ilistval> INTS
 %type <vecval> VECTOR
 %type <veclistval> VECTORS
 
 %type <strval> structure
+%type <restructval> attributedstructure
 %type <strlistval> production
 %type <prodlistval> productions
+
+%type <attrlistval> attributes
+%type <attrval> attribute
+
+%type <exprval> expression
+%type <exprval> term
+%type <exprval> factor
 
 %%
 
@@ -102,9 +128,10 @@ statement:
     | proddef
     ;
 termdef:
-    TERMINAL STRING LPAR INT RPAR LBRA VECTORS RBRA SEMICOLON {
+    TERMINAL STRING LPAR NUMBER RPAR LBRA VECTORS RBRA SEMICOLON {
         /*std::cout << "New terminal: \"" << *$2 << "\" of arity "*/
                   /*<< $4 << std::endl;*/
+        unsigned int arity = std::stoi(*$4);
         type_ptr type = std::make_shared<grammar::MedusaType>(*$2);
         for( Eigen::Vector2d * point : *$7 )
         {
@@ -117,9 +144,10 @@ termdef:
     }
     ;
 nontermdef:
-    NONTERMINAL STRING LPAR INT RPAR SEMICOLON {
+    NONTERMINAL STRING LPAR NUMBER RPAR SEMICOLON {
         /*std::cout << "New non-terminal: \"" << *$2 << "\" of arity "*/
                   /*<< $4 << std::endl;*/
+        unsigned int arity = std::stoi(*$4);
         type_ptr type = std::make_shared<grammar::MedusaType>(*$2);
         _type_dict[*$2] = type;
         delete $2;
@@ -129,7 +157,10 @@ nontermdef:
 axiomdef:
     AXIOM STRING SEMICOLON {
         if( _grammar->getAxiom() )
+        {
+            delete $2;
             throw std::invalid_argument("Axiom defined twice");
+        }
         try
         {
             type_ptr type = _type_dict.at(*$2);
@@ -146,8 +177,9 @@ axiomdef:
     }
     ;
 proddef:
-    structure INT ARROW productions SEMICOLON {
-        add_production($1, $2, $4, _grammar);
+    structure NUMBER ARROW productions SEMICOLON {
+        unsigned int newNodes = std::stoi(*$2);
+        add_production($1, newNodes, $4, _grammar);
         delete $1;
         delete $4;
     }
@@ -164,38 +196,104 @@ productions:
     }
     ;
 production:
-    structure COMMA production {
+    attributedstructure COMMA production {
         $3->push_back($1);
         $$ = $3;
     }
-    | structure {
-        std::list<str_type*> * lst = new std::list<str_type*>();
+    | attributedstructure {
+        std::list<restruct*> * lst = new std::list<restruct*>();
         lst->push_back($1);
         $$ = lst;
     }
     ;
+attributedstructure:
+    STRING LPAR INTS VERT attributes RPAR {
+        type_ptr type = _type_dict[*$1];
+        restruct * rs = new restruct(type, $3);
+        for(auto attribute : *$5)
+        {
+            std::string name = attribute->first;
+            if(name == "x")
+            {
+                rs->x_expr = attribute->second;
+                continue;
+            }
+            else if(name == "y")
+            {
+                rs->y_expr = attribute->second;
+                continue;
+            }
+            else if(name == "rotation")
+            {
+                rs->rotation = attribute->second;
+                continue;
+            }
+            std::ostringstream stream;
+            stream << "Unknown attribute \"" << name << "\"";
+            throw std::invalid_argument(stream.str());
+        }
+        $$ = rs;
+    }
+    | STRING LPAR attributes RPAR {
+        std::vector<unsigned int> empty;
+        type_ptr type = _type_dict[*$1];
+        restruct * rs = new restruct(type, &empty);
+        for(auto attribute : *$3)
+        {
+            std::string name = attribute->first;
+            if(name == "x")
+            {
+                rs->x_expr = attribute->second;
+                continue;
+            }
+            else if(name == "y")
+            {
+                rs->y_expr = attribute->second;
+                continue;
+            }
+            else if(name == "rotation")
+            {
+                rs->rotation = attribute->second;
+                continue;
+            }
+            std::ostringstream stream;
+            stream << "Unknown attribute \"" << name << "\"";
+            throw std::invalid_argument(stream.str());
+        }
+        $$ = rs;
+    }
+    | STRING LPAR INTS RPAR {
+        type_ptr type = _type_dict[*$1];
+        $$ = new restruct(type, $3);
+    }
+    | STRING LPAR RPAR {
+        std::vector<unsigned int> empty;
+        type_ptr type = _type_dict[*$1];
+        $$ = new restruct(type, &empty);
+    }
+    ;
 structure:
     STRING LPAR INTS RPAR {
-        $$ = new str_type(*$1,$3);
+        $$ = new str_type(*$1, $3);
     }
     | STRING LPAR RPAR {
         $$ = new str_type(*$1, new std::list<unsigned int>());
     }
     ;
 INTS:
-    INTS COMMA INT {
-        $1->push_back($3);
+    INTS COMMA NUMBER {
+        $1->push_back(std::stoi(*$3));
         $$ = $1;
     }
-    | INT {
+    | NUMBER {
         std::list<unsigned int> * lst = new std::list<unsigned int>();
-        lst->push_back($1);
+        lst->push_back(std::stoi(*$1));
         $$ = lst;
     }
     ;
 VECTOR:
-    LPAR INT COMMA INT RPAR {
-        $$ = new Eigen::Vector2d($2,$4);
+    LPAR NUMBER COMMA NUMBER RPAR {
+        $$ = new Eigen::Vector2d(std::stoi(*$2),std::stoi(*$4));
     }
     ;
 VECTORS:
@@ -209,6 +307,56 @@ VECTORS:
         $$ = lst;
     }
     ;
+attributes:
+    attribute COMMA attributes {
+        $3->push_back($1);
+        $$ = $3;
+    }
+    | attribute {
+        attrlist * lst = new attrlist();
+        lst->push_back($1);
+        $$ = lst;
+    }
+    ;
+attribute:
+    COLOR EQUAL STRING
+    | ATTRIBUTENAME EQUAL expression {
+        $$ = new attribute_t(*$1, $3);
+    }
+    ;
+expression:
+    expression PLUS term {
+        $$ = new grammar::AddAttributeExpr($1,$3);
+    }
+    | term {
+        $$ = $1;
+    }
+    ;
+term:
+    term TIMES factor {
+        $$ = new grammar::MultAttributeExpr($1,$3);
+    }
+    | factor {
+        $$ = $1;
+    }
+    ;
+factor:
+    NUMBER {
+        $$ = new grammar::ConstantAttributeExpr(std::stod(*$1));
+    }
+    | PARENTX {
+        $$ = new grammar::InheritedXAttributeExpr();
+    }
+    | PARENTY {
+        $$ = new grammar::InheritedYAttributeExpr();
+    }
+    | PARENTROTATION {
+        $$ = new grammar::InheritedRotationAttributeExpr();
+    }
+    | LPAR expression RPAR {
+        $$ = $2;
+    }
+    ;
 
 %%
 
@@ -219,7 +367,7 @@ void parse_grammar(QString string, grammar::Grammar * grammar)
     yyparse();
     yy_delete_buffer(buffstate);
     if( !_grammar->getAxiom() )
-        throw initialization_error("No axiom selected");
+        throw initialization_error("No axiom specified");
 }
 
 void add_production(str_type *initial, int newnodes,
@@ -241,12 +389,13 @@ void add_production(str_type *initial, int newnodes,
                 std::make_shared<grammar::Production>(head, newnodes);
         unsigned int map_index = initial->second->size();
         std::vector<int> map(_map);
-        for(str_type * structure : *prod)
+        for(restruct * structure : *prod)
         {
-            type_ptr body_type = _type_dict[structure->first];
-            std::vector<unsigned int> aps;
-            for(unsigned int value : *(structure->second))
+            for(unsigned int index = 0;
+                index < structure->size();
+                index++)
             {
+                unsigned int value = (*structure)[index];
                 if( !(value < nodeCount) )
                 {
                     std::ostringstream stream;
@@ -255,10 +404,9 @@ void add_production(str_type *initial, int newnodes,
                 }
                 if( map[value] == -1 )
                     map[value] = map_index++;
-                aps.push_back(map[value]);
+                (*structure)[index] = map[value];
             }
-            restruct_ptr body = std::make_shared<restruct>(body_type,
-                                                           aps);
+            restruct_ptr body = std::shared_ptr<restruct>(structure);
             newprod->addBodyStructure(body);
         }
         grammar->addProduction(newprod);
@@ -267,6 +415,8 @@ void add_production(str_type *initial, int newnodes,
 
 void yyerror(const char * s)
 {
-    std::cout << line_number << ": " << s << " on token \"" << yytext << "\""
-              << std::endl;
+    std::ostringstream sstream;
+    sstream << line_number << ": " << s << " on token \"" << yytext << "\""
+            << std::endl;
+    throw std::invalid_argument(sstream.str());
 }
